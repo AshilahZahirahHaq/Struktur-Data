@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N-Queens Solver</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080705;
+    --surface: #110f0a;
+    --surface2: #1a1710;
+    --border: #2e2a1e;
+    --gold: #c9a84c;
+    --gold-light: #e8c547;
+    --gold-dim: #7a6530;
+    --cream: #f0e8d0;
+    --muted: #6b5f40;
+    --cell-light: #2a2416;
+    --cell-dark: #0f0d08;
+    --queen-glow: rgba(201,168,76,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'Crimson Text', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 60%),
+      repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(201,168,76,0.01) 40px, rgba(201,168,76,0.01) 41px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 48px 32px; position: relative; z-index: 1; }
+
+  /* Header */
+  header { text-align: center; margin-bottom: 48px; }
+  .crown { font-size: 48px; display: block; margin-bottom: 12px; filter: drop-shadow(0 0 20px var(--gold)); animation: float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(32px, 6vw, 64px);
+    font-weight: 900;
+    letter-spacing: 6px;
+    color: var(--gold-light);
+    text-shadow: 0 0 40px rgba(232,197,71,0.3);
+    margin-bottom: 8px;
+  }
+  header p {
+    font-size: 16px;
+    color: var(--muted);
+    font-style: italic;
+    letter-spacing: 2px;
+  }
+  .divider {
+    display: flex; align-items: center; gap: 16px;
+    margin: 24px auto; max-width: 400px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-dim));
+  }
+  .divider::after { background: linear-gradient(90deg, var(--gold-dim), transparent); }
+  .divider span { color: var(--gold); font-size: 18px; }
+
+  /* Layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  @media (max-width: 800px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 28px;
+    position: relative;
+  }
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* Form */
+  .form-group { margin-bottom: 18px; }
+  .form-group label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .form-group input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px 14px;
+    color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    text-align: center;
+  }
+  .form-group input:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 12px rgba(201,168,76,0.15);
+  }
+
+  .btn-solve {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    border-radius: 2px;
+    color: var(--gold-light);
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-solve::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(201,168,76,0.08));
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .btn-solve:hover { border-color: var(--gold-light); box-shadow: 0 0 20px rgba(201,168,76,0.2); }
+  .btn-solve:hover::before { opacity: 1; }
+  .btn-solve:active { transform: scale(0.98); }
+
+  /* Nav */
+  .nav-row {
+    display: flex; align-items: center; gap: 10px; margin-top: 16px;
+  }
+  .btn-nav {
+    flex: 1; padding: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--gold-dim);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-nav:hover { border-color: var(--gold-dim); color: var(--gold-light); }
+  .nav-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    flex: 1.5;
+  }
+
+  /* Stats */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: 'Cinzel', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--gold-light);
+    display: block;
+  }
+  .stat-lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* Board area */
+  .board-area { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  .board-wrap {
+    display: inline-block;
+    border: 2px solid var(--gold-dim);
+    box-shadow: 0 0 40px rgba(201,168,76,0.12), inset 0 0 20px rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .board-wrap::before, .board-wrap::after {
+    content: '';
+    position: absolute;
+    border: 1px solid rgba(201,168,76,0.2);
+  }
+  .board-wrap::before { inset: 4px; }
+  .board-wrap::after { inset: -6px; border-color: rgba(201,168,76,0.08); }
+
+  #board {
+    display: grid;
+  }
+  .cell {
+    width: 56px; height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    cursor: default;
+    transition: background 0.3s;
+  }
+  .cell.light { background: var(--cell-light); }
+  .cell.dark  { background: var(--cell-dark); }
+  .cell.queen {
+    background: radial-gradient(circle, rgba(201,168,76,0.25) 0%, var(--cell-light) 70%);
+  }
+  .cell.dark.queen {
+    background: radial-gradient(circle, rgba(201,168,76,0.2) 0%, var(--cell-dark) 70%);
+  }
+  .queen-icon {
+    font-size: 30px;
+    filter: drop-shadow(0 0 8px var(--gold));
+    animation: queenIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    color: var(--gold-light);
+    line-height: 1;
+  }
+  @keyframes queenIn {
+    from { opacity:0; transform: scale(0.3) rotate(-20deg); }
+    to   { opacity:1; transform: scale(1) rotate(0deg); }
+  }
+
+  /* Coord labels */
+  .coords-row, .coords-col { display: flex; }
+  .coord {
+    width: 56px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    padding: 4px 0;
+  }
+  .coord-side {
+    height: 56px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    display: flex; align-items: center;
+    padding: 0 6px;
+  }
+
+  /* Status */
+  .status-badge {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    padding: 8px 20px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .status-badge.ok { color: var(--gold-light); border: 1px solid var(--gold-dim); background: rgba(201,168,76,0.08); }
+  .status-badge.idle { color: var(--muted); border: 1px solid var(--border); }
+
+  /* Solution position display */
+  .positions {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .positions span { color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <span class="crown">♛</span>
+    <h1>N — QUEENS</h1>
+    <div class="divider"><span>✦</span></div>
+    <p>Tempatkan N ratu tanpa saling menyerang · Backtracking Rekursif</p>
+  </header>
+
+  <div class="main-grid">
+    <!-- Control Panel -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">Pengaturan</div>
+        <div class="form-group">
+          <label>Ukuran Papan (N)</label>
+          <input type="number" id="size" value="8" min="4" max="12">
+        </div>
+        <button class="btn-solve" onclick="solve()">Cari Semua Solusi</button>
+
+        <div id="nav-area" style="display:none">
+          <div class="nav-row">
+            <button class="btn-nav" onclick="prev()">← Prev</button>
+            <div class="nav-label" id="nav-label">1 / ?</div>
+            <button class="btn-nav" onclick="next()">Next →</button>
+          </div>
+        </div>
+
+        <div class="stat-grid" id="stats" style="display:none">
+          <div class="stat-box">
+            <span class="stat-val" id="stat-total">0</span>
+            <span class="stat-lbl">Total Solusi</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-val" id="stat-n">0</span>
+            <span class="stat-lbl">Ukuran N</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-title">Posisi Ratu</div>
+        <div class="positions" id="positions">—</div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-title">Cara Baca</div>
+        <div style="font-size:13px; color:var(--muted); line-height:1.8">
+          Setiap solusi menunjukkan posisi kolom ratu per baris. Tidak ada dua ratu yang sebaris, sekolom, atau sediagonal. Gunakan tombol Prev/Next untuk melihat semua solusi.
+        </div>
+      </div>
+    </div>
+
+    <!-- Board -->
+    <div class="board-area">
+      <div id="board-container">
+        <div style="text-align:center; padding: 60px 40px; color: var(--muted); font-style:italic; font-size:14px; letter-spacing:2px;">
+          Masukkan ukuran N dan tekan<br>"Cari Semua Solusi"
+        </div>
+      </div>
+      <div id="status" class="status-badge idle">Menunggu Input</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let solutions = [], current = 0;
+
+function solve() {
+  const n = parseInt(document.getElementById('size').value);
+  if (n < 4 || n > 12) { alert('N harus antara 4–12'); return; }
+
+  solutions = [];
+  const board = Array(n).fill(-1);
+
+  function isSafe(row, col) {
+    for (let i = 0; i < row; i++) {
+      if (board[i] === col || Math.abs(board[i]-col) === Math.abs(i-row)) return false;
+    }
+    return true;
+  }
+  function place(row) {
+    if (row === n) { solutions.push([...board]); return; }
+    for (let col = 0; col < n; col++) {
+      if (isSafe(row, col)) { board[row] = col; place(row+1); board[row] = -1; }
+    }
+  }
+  place(0);
+
+  current = 0;
+  document.getElementById('nav-area').style.display = 'block';
+  document.getElementById('stats').style.display = 'grid';
+  document.getElementById('stat-total').textContent = solutions.length;
+  document.getElementById('stat-n').textContent = n;
+  render(0);
+}
+
+function render(idx) {
+  const sol = solutions[idx];
+  const n = sol.length;
+  document.getElementById('nav-label').textContent = `${idx+1} / ${solutions.length}`;
+  document.getElementById('status').className = 'status-badge ok';
+  document.getElementById('status').textContent = `Solusi ${idx+1} dari ${solutions.length}`;
+  document.getElementById('positions').innerHTML =
+    sol.map((c,r) => `<span>Baris ${r+1} → Kol ${c+1}</span>`).join('<br>');
+
+  const size = Math.max(36, Math.min(60, Math.floor(480 / n)));
+
+  let html = `<div style="display:flex;flex-direction:column;align-items:center;gap:0">`;
+  // Column labels
+  html += `<div style="display:flex;margin-left:${size*0.5}px;margin-bottom:4px">`;
+  for (let c = 0; c < n; c++) html += `<div style="width:${size}px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">${String.fromCharCode(65+c)}</div>`;
+  html += `</div>`;
+
+  html += `<div style="display:flex">`;
+  // Row labels
+  html += `<div style="display:flex;flex-direction:column">`;
+  for (let r = 0; r < n; r++)
+    html += `<div style="height:${size}px;display:flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);padding-right:6px">${n-r}</div>`;
+  html += `</div>`;
+
+  // Board
+  html += `<div class="board-wrap"><div id="board" style="display:grid;grid-template-columns:repeat(${n},${size}px)">`;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const isLight = (r+c)%2===0;
+      const hasQueen = sol[r]===c;
+      html += `<div class="cell ${isLight?'light':'dark'} ${hasQueen?'queen':''}" style="width:${size}px;height:${size}px">`;
+      if (hasQueen) html += `<span class="queen-icon" style="font-size:${size*0.55}px;animation-delay:${(r*n+c)*0.03}s">♛</span>`;
+      html += `</div>`;
+    }
+  }
+  html += `</div></div></div></div>`;
+  document.getElementById('board-container').innerHTML = html;
+}
+
+function prev() { if (current > 0) render(--current); }
+function next() { if (current < solutions.length-1) render(++current); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') prev();
+  if (e.key === 'ArrowRight') next();
+  if (e.key === 'Enter') solve();
+});
+</script>
+</body>
+</html>

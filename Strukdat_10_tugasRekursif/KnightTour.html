@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knight's Tour Solver</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&family=Barlow:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #03080f;
+    --surface: #060d18;
+    --surface2: #0a1525;
+    --border: #0f2540;
+    --blue: #5b8fff;
+    --blue-bright: #7eb0ff;
+    --blue-dim: #1e3a6b;
+    --blue-glow: rgba(91,143,255,0.3);
+    --cyan: #00d4ff;
+    --text: #c8dcf8;
+    --muted: #3a5a8a;
+    --grid-line: rgba(91,143,255,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid BG */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(91,143,255,0.07) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 40px 32px; position: relative; z-index: 1; }
+
+  /* Header */
+  header {
+    display: flex; align-items: center; gap: 24px;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  header::after {
+    content: '';
+    position: absolute; bottom: -1px; left: 0;
+    width: 200px; height: 1px;
+    background: linear-gradient(90deg, var(--blue), transparent);
+  }
+  .knight-icon { font-size: 52px; filter: drop-shadow(0 0 16px var(--blue)); }
+  .header-text h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(28px, 5vw, 56px);
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--blue-bright);
+    text-shadow: 0 0 30px rgba(91,143,255,0.4);
+    line-height: 1;
+  }
+  .header-text p {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-top: 6px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, var(--blue-dim), var(--blue), var(--blue-dim));
+  }
+  .panel-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--blue-dim);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form-group input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-align: center;
+  }
+  .form-group input:focus { border-color: var(--blue-dim); box-shadow: 0 0 12px rgba(91,143,255,0.15); }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--blue-dim);
+    border-radius: 3px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s;
+    margin-bottom: 8px;
+  }
+  .btn-primary { background: rgba(91,143,255,0.1); color: var(--blue-bright); }
+  .btn-primary:hover { background: rgba(91,143,255,0.2); border-color: var(--blue); box-shadow: 0 0 20px rgba(91,143,255,0.2); }
+  .btn-secondary { background: transparent; color: var(--muted); border-color: var(--border); }
+  .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+  .btn:active { transform: scale(0.98); }
+
+  /* Step list */
+  .step-list {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px;
+    max-height: 240px;
+    overflow-y: auto;
+    margin-top: 12px;
+  }
+  .step-list::-webkit-scrollbar { width: 3px; }
+  .step-list::-webkit-scrollbar-thumb { background: var(--border); }
+  .step-item {
+    display: flex; gap: 8px; align-items: center;
+    padding: 3px 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    border-bottom: 1px solid rgba(91,143,255,0.05);
+  }
+  .step-item.first { color: var(--cyan); }
+  .step-num { color: var(--blue-dim); width: 28px; text-align: right; flex-shrink: 0; }
+
+  /* Board */
+  .board-section { display: flex; flex-direction: column; gap: 20px; }
+  .board-outer {
+    display: flex; align-items: flex-start; gap: 0;
+  }
+  .row-labels { display: flex; flex-direction: column; }
+  .row-lbl {
+    display: flex; align-items: center; justify-content: flex-end;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    padding-right: 8px;
+  }
+  .col-labels { display: flex; margin-left: 0; }
+  .col-lbl {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .board-frame {
+    border: 1px solid var(--blue-dim);
+    box-shadow: 0 0 40px rgba(91,143,255,0.1);
+    display: inline-block;
+  }
+  #board { display: grid; }
+  .cell {
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: background 0.15s;
+  }
+  .cell.light { background: #0c1830; }
+  .cell.dark  { background: #060d18; }
+  .cell-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: 600;
+    color: var(--blue);
+    position: relative; z-index: 2;
+    animation: numIn 0.25s ease forwards;
+  }
+  @keyframes numIn { from{opacity:0;transform:scale(0.5)} to{opacity:1;transform:scale(1)} }
+  .cell.start-cell { background: rgba(0,212,255,0.25) !important; }
+  .cell.start-cell .cell-num { color: var(--cyan); font-size: 110%; }
+  .cell.visited {
+    background: rgba(91,143,255,0.12);
+  }
+  .cell.dark.visited { background: rgba(91,143,255,0.08); }
+
+  /* Arrow canvas overlay */
+  .board-wrapper { position: relative; display: inline-block; }
+  #arrow-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex; gap: 16px; flex-wrap: wrap;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 20px;
+    flex: 1; min-width: 100px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--blue-bright);
+    display: block;
+  }
+  .stat-lbl {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+  }
+
+  /* Status */
+  .status-line {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 10px 16px;
+    border-radius: 3px;
+    letter-spacing: 2px;
+  }
+  .status-line.ok { background: rgba(91,143,255,0.1); color: var(--blue-bright); border: 1px solid var(--blue-dim); }
+  .status-line.fail { background: rgba(255,80,80,0.1); color: #ff6b6b; border: 1px solid rgba(255,80,80,0.3); }
+  .status-line.idle { color: var(--muted); }
+
+  .anim-speed { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .anim-speed label { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; }
+  .anim-speed input { flex:1; accent-color: var(--blue); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="knight-icon">♞</div>
+    <div class="header-text">
+      <h1>KNIGHT'S TOUR</h1>
+      <p>// WARNSDORFF HEURISTIC + RECURSIVE BACKTRACKING</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Left panel -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="panel">
+        <div class="panel-label">// Konfigurasi</div>
+        <div class="form-group">
+          <label>Ukuran Papan (N)</label>
+          <input type="number" id="k-size" value="8" min="5" max="10">
+        </div>
+        <div class="form-group">
+          <label>Posisi Awal (baris, kolom) — 0-indexed</label>
+          <div class="input-row">
+            <input type="number" id="k-row" value="0" min="0" placeholder="Baris">
+            <input type="number" id="k-col" value="0" min="0" placeholder="Kolom">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="solveKnight()">Selesaikan</button>
+        <button class="btn btn-secondary" id="anim-btn" onclick="startAnimation()" style="display:none">Animasi Ulang</button>
+        <div class="anim-speed" id="speed-row" style="display:none">
+          <label>Kecepatan</label>
+          <input type="range" id="anim-speed" min="30" max="400" value="120" step="10">
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">// Daftar Langkah</div>
+        <div class="step-list" id="step-list">
+          <div style="color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px">Belum ada solusi...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right board -->
+    <div class="board-section">
+      <div class="stats-bar">
+        <div class="stat"><span class="stat-val" id="s-steps">—</span><span class="stat-lbl">Total Langkah</span></div>
+        <div class="stat"><span class="stat-val" id="s-size">—</span><span class="stat-lbl">Ukuran Papan</span></div>
+        <div class="stat"><span class="stat-val" id="s-start">—</span><span class="stat-lbl">Posisi Awal</span></div>
+        <div class="stat"><span class="stat-val" id="s-algo">W</span><span class="stat-lbl">Algoritma</span></div>
+      </div>
+
+      <div id="status-line" class="status-line idle">// Masukkan konfigurasi dan tekan Selesaikan</div>
+
+      <div id="board-container">
+        <div style="display:flex;align-items:center;justify-content:center;height:300px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px">
+          WAITING FOR INPUT...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MOVES = [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+let solvedBoard = null, solvedPath = [], animTimer = null;
+
+function solveKnight() {
+  clearInterval(animTimer);
+  const n = parseInt(document.getElementById('k-size').value);
+  let sr = parseInt(document.getElementById('k-row').value);
+  let sc = parseInt(document.getElementById('k-col').value);
+  sr = Math.max(0, Math.min(n-1, sr));
+  sc = Math.max(0, Math.min(n-1, sc));
+
+  const board = Array.from({length:n}, () => Array(n).fill(-1));
+  board[sr][sc] = 0;
+  const path = [[sr, sc]];
+
+  function deg(r, c) {
+    return MOVES.filter(([dr,dc]) => {
+      const nr=r+dr, nc=c+dc;
+      return nr>=0 && nr<n && nc>=0 && nc<n && board[nr][nc]===-1;
+    }).length;
+  }
+
+  function solve(r, c, step) {
+    if (step === n*n) return true;
+    const nexts = MOVES
+      .map(([dr,dc]) => [r+dr, c+dc])
+      .filter(([nr,nc]) => nr>=0 && nr<n && nc>=0 && nc<n && board[nr][nc]===-1)
+      .sort((a,b) => deg(...a) - deg(...b));
+    for (const [nr,nc] of nexts) {
+      board[nr][nc] = step;
+      path.push([nr,nc]);
+      if (solve(nr,nc,step+1)) return true;
+      board[nr][nc] = -1;
+      path.pop();
+    }
+    return false;
+  }
+
+  const found = solve(sr, sc, 1);
+  document.getElementById('s-size').textContent = `${n}×${n}`;
+  document.getElementById('s-start').textContent = `(${sr},${sc})`;
+  document.getElementById('s-algo').textContent = 'W+B';
+
+  if (found) {
+    solvedBoard = board.map(r=>[...r]);
+    solvedPath = [...path];
+    document.getElementById('s-steps').textContent = n*n;
+    document.getElementById('status-line').className = 'status-line ok';
+    document.getElementById('status-line').textContent = `// SOLUSI DITEMUKAN — ${n*n} langkah berhasil dikunjungi`;
+    document.getElementById('anim-btn').style.display = 'block';
+    document.getElementById('speed-row').style.display = 'flex';
+    renderBoard(board, n, sr, sc, path);
+    renderStepList(path, n);
+  } else {
+    solvedBoard = null;
+    document.getElementById('s-steps').textContent = '✗';
+    document.getElementById('status-line').className = 'status-line fail';
+    document.getElementById('status-line').textContent = `// TIDAK ADA SOLUSI dari posisi (${sr},${sc})`;
+    document.getElementById('anim-btn').style.display = 'none';
+    document.getElementById('speed-row').style.display = 'none';
+    renderEmptyBoard(n);
+  }
+}
+
+function renderBoard(board, n, sr, sc, path) {
+  const cellSize = Math.max(36, Math.min(58, Math.floor(560/n)));
+  const fs = Math.max(9, Math.min(14, cellSize*0.26));
+
+  let html = `<div style="display:flex;flex-direction:column;gap:0">`;
+  // Col labels
+  html += `<div style="display:flex;margin-left:${cellSize*0.6}px;margin-bottom:3px">`;
+  for (let c=0;c<n;c++) html += `<div class="col-lbl" style="width:${cellSize}px">${String.fromCharCode(65+c)}</div>`;
+  html += `</div><div style="display:flex">`;
+  // Row labels
+  html += `<div class="row-labels">`;
+  for (let r=0;r<n;r++) html += `<div class="row-lbl" style="height:${cellSize}px;width:${cellSize*0.6}px">${n-r}</div>`;
+  html += `</div>`;
+  // Board
+  html += `<div class="board-frame"><div id="board" style="display:grid;grid-template-columns:repeat(${n},${cellSize}px)">`;
+  for (let r=0;r<n;r++) {
+    for (let c=0;c<n;c++) {
+      const isLight = (r+c)%2===0;
+      const step = board[r][c];
+      const isStart = r===sr && c===sc;
+      const cls = `cell ${isLight?'light':'dark'} ${step>=0?'visited':''} ${isStart?'start-cell':''}`;
+      html += `<div class="${cls}" id="cell-${r}-${c}" style="width:${cellSize}px;height:${cellSize}px">`;
+      if (step >= 0) html += `<span class="cell-num" style="font-size:${fs}px;animation-delay:${step*0.02}s">${step+1}</span>`;
+      html += `</div>`;
+    }
+  }
+  html += `</div></div></div></div>`;
+  document.getElementById('board-container').innerHTML = html;
+}
+
+function renderEmptyBoard(n) {
+  const cellSize = Math.max(36, Math.min(58, Math.floor(560/n)));
+  let html = `<div class="board-frame"><div style="display:grid;grid-template-columns:repeat(${n},${cellSize}px)">`;
+  for (let r=0;r<n;r++)
+    for (let c=0;c<n;c++) {
+      const isLight=(r+c)%2===0;
+      html += `<div class="cell ${isLight?'light':'dark'}" style="width:${cellSize}px;height:${cellSize}px"></div>`;
+    }
+  html += `</div></div>`;
+  document.getElementById('board-container').innerHTML = html;
+}
+
+function startAnimation() {
+  if (!solvedBoard) return;
+  clearInterval(animTimer);
+  const n = solvedBoard.length;
+  const sr = solvedPath[0][0], sc = solvedPath[0][1];
+  const speed = parseInt(document.getElementById('anim-speed').value);
+
+  // Reset board cells
+  const cellSize = Math.max(36, Math.min(58, Math.floor(560/n)));
+  const fs = Math.max(9, Math.min(14, cellSize*0.26));
+
+  let html = `<div style="display:flex;flex-direction:column;gap:0">`;
+  html += `<div style="display:flex;margin-left:${cellSize*0.6}px;margin-bottom:3px">`;
+  for (let c=0;c<n;c++) html += `<div class="col-lbl" style="width:${cellSize}px">${String.fromCharCode(65+c)}</div>`;
+  html += `</div><div style="display:flex">`;
+  html += `<div class="row-labels">`;
+  for (let r=0;r<n;r++) html += `<div class="row-lbl" style="height:${cellSize}px;width:${cellSize*0.6}px">${n-r}</div>`;
+  html += `</div>`;
+  html += `<div class="board-frame"><div id="board" style="display:grid;grid-template-columns:repeat(${n},${cellSize}px)">`;
+  for (let r=0;r<n;r++)
+    for (let c=0;c<n;c++) {
+      const isLight=(r+c)%2===0;
+      html += `<div class="cell ${isLight?'light':'dark'}" id="cell-${r}-${c}" style="width:${cellSize}px;height:${cellSize}px"></div>`;
+    }
+  html += `</div></div></div></div>`;
+  document.getElementById('board-container').innerHTML = html;
+
+  let step = 0;
+  animTimer = setInterval(() => {
+    if (step >= solvedPath.length) { clearInterval(animTimer); return; }
+    const [r,c] = solvedPath[step];
+    const cell = document.getElementById(`cell-${r}-${c}`);
+    if (cell) {
+      cell.classList.add('visited');
+      if (r===sr && c===sc) cell.classList.add('start-cell');
+      cell.innerHTML = `<span class="cell-num" style="font-size:${fs}px">${step+1}</span>`;
+    }
+    step++;
+  }, speed);
+}
+
+function renderStepList(path, n) {
+  const el = document.getElementById('step-list');
+  el.innerHTML = path.map(([r,c], i) =>
+    `<div class="step-item ${i===0?'first':''}">
+      <span class="step-num">${i+1}</span>
+      <span>(${r}, ${c})</span>
+      <span style="color:var(--muted);font-size:10px">${String.fromCharCode(65+c)}${n-r}</span>
+      ${i===0?'<span style="color:var(--cyan);margin-left:4px">← START</span>':''}
+     </div>`
+  ).join('');
+}
+</script>
+</body>
+</html>
