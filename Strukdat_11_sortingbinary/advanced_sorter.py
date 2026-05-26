@@ -1,6 +1,5 @@
 """
 =============================================================
-Tugas: Analisis & Desain Algoritma Sorting Lanjutan
 Implementasi: AdvancedSorter + ExprHeapSorter
 =============================================================
 """
